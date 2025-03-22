@@ -33,6 +33,28 @@
 
 ## Design goals
 
+#### Model:
+
+**Easy Extensibility for New Simulations** - Allow adding new simulations without rewriting existing classes.
+- State interface for creating new enum states easily.
+- Logic class (with reflection for parameters) so each new simulation can plug in its own rules.
+- Property maps in Cell to store extra simulation-specific data.
+
+**Flexible Neighbor & Grid Configurations** - Support different neighbor types, shapes, and edges.
+
+- NeighborCalculator uses property files and BFS/raycasting to handle multiple shapes and neighbor definitions.
+- Enums and reflection/factory logic to avoid hardcoding.
+
+**Separation of View Concerns** - Keep the model decoupled from the view.
+
+- Logic manipulates Grid/Cell data behind an API; the UI only renders the grid via a separate controller.
+- The model’s two-phase update (setting nextState before calling updateGrid()) ensures the view can display a stable frame at any time.
+
+**Data-Driven Configuration** - Reduce code changes when new simulations or neighbor definitions are introduced.
+- External .properties files that define neighbor offsets, default parameter values, etc.
+- Reflection-based loading of strategies or enumerations, minimizing if-else logic.
+
+
 #### View:
   * The interface is clean and visually appealing,
      * Good UX, intuitive, and easy to understand
