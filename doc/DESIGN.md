@@ -129,16 +129,19 @@
 
 
 #### View:
-   * Main Functionality:
-     * SimulationScene
-     * SceneController
-     * Language/ThemeController
-   * UI Formatting:
-     * Docker/DWindow
-     * SceneUIWidgetFactory
-   * Rendering:
-     * GridDrawer
-     * SceneRenderer
+
+**Main Functionality**:
+- SimulationScene is a class that implements the Scene interface. It is the main class that holds the scene and all of the UI elements.
+- SceneController handles all scene UI events and interacts with both modelAPI and configAPI. It serves as the core logic processor for the entire scene.
+- Language/ThemeController is the global controller for localization and theme management. It provides methods for hot reloading localization and themes and serves as the primary class responsible for binding UI text and styles.
+
+**UI Formatting**:
+- Docker/DWindow is the core of the entire docking system and the backbone of our UI formatting. It provides interfaces for binding standard JavaFX UI components to specific windows and serves as the container for the entire display interface.
+- SceneUIWidgetFactory is a wrapper for the entire JavaFX UI. It encapsulates commonly used components, allowing us to maintain a consistent style when creating UI elements.
+
+**Rendering**:
+- GridDrawer is an abstract parent class for drawing grids. It is primarily designed for subclass inheritance, allowing the implementation of specific methods to render different cell shape tiling styles. This abstract class enables flexible expansion for various grid display styles.
+- SceneRenderer is a further encapsulation of GridDrawer. It is a purely static class, and the scene utilizes its APIs to render the model.
 
 
 ## Assumptions that Affect the Design
