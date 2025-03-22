@@ -43,6 +43,13 @@
 
 #### What Features are Easy to Add
 
+
+#### Configuration
+
+ - **Configuration file**: A new configuration file specifying a a simulation type is simple. Just create an xml document and format it according an example simulation xml of the same simulation type.
+
+- **Configuration Information**: If you want to include another node in your xml you just need to change the configInfo file, read the node in the xml, and then add it to the configInfo instances where the program makes a new configInfo object.
+
 #### Model:
  - **State class**: A new enum class implementing State must be defined with desired enum values. getValue() must be implemented, typically simply returning the value of the current enum state. This class is very simple to extend.
 - **Logic Class**: A new logic class implementing Logic must be defined with the desired interactions, and must implement updateSingleCell(), the logic that should be called on all applicable cells. Helpers to load paramaters and check boundaries and a structure to update the grid are provided in Logic to make it easier to create and extend.
@@ -67,6 +74,21 @@
 ## High-level Design
 
 #### Core Classes
+
+
+#### Configuration:
+
+**ConfigInfo**:
+ - ConfigInfo is a record that implements the design of a record pattern. It provides the information for the configuration information after it is read.
+ - Subclasses: CellRecord: the storage class used the store cell info and ParameterRecord a storage class used to store the Parameter Information
+
+**ConfigReader**:
+- The ConfigReader class reads the configInformation and creates a configInfo object
+- Subclasses used by the configReader are: GridReader which is responsible for reading and parsing the grid and the RandomStatesAndProportionsGridReader class which is used
+by the gridReader class when the xml document specifies that it has random state or proportions to define the cell structures
+
+**ConfigWriter**:
+ - The configWrite class is responsible for the creation of the xml documents when a user wants to save a simulation
 
 #### Model:
 
@@ -121,6 +143,14 @@
 
 ## Assumptions that Affect the Design
 
+
+#### Configuration: 
+
+- **Assumption**: The xml data in the files is mostly correct. If the xml data file is not formated correctly errors will be thrown
+but usually as an assumption xml files are of a certain format. 
+
+- **Assumption**: A cell will only have doubles properties. In the cellRecord class we currently only store a map of string to doubles for the cell properties.
+
 #### Model:
 - **Assumption: There are a set number of states for all simulations** - 
 This made it really easy to make states for most simulations, as pairing integers and enums was incredibly simple. However, this proved to be a serious problem when tackling Bacteria. Enums could not represent the states, and things that used states, such as all of the model classes, color mangement, and config reading, would not work. We stuck with enums, instead using a dummy enum that held no values. Instead, the real value would be saved in the cell properties.
@@ -145,6 +175,14 @@ This made it really easy to make states for most simulations, as pairing integer
 
 
 ## Significant differences from Original Plan
+
+
+#### Configuration:
+
+- **Difference: Configuration Reading is split up** - we originally planned for the configReader class to handle all the reading functionality. However, as the class got bigger and bigger I felt it was necessary to break of the configReader class. To avoid too much refactoring I and to maintain high abstraction I created the subclasses for the grid reading.
+
+
+- **Difference: ConfigInfo Record Class** - we did not plan to use a record class to contain the configInfo this changed once we knew what a record class was.
 
 #### Model
 
@@ -174,6 +212,21 @@ This made it really easy to make states for most simulations, as pairing integer
 ## New Features HowTo
 
 #### Easy to Add Features
+
+#### Configuration:
+
+**Adding a Simulation File**
+- Create a new xml file and name it something appropriate
+- add the xml header
+- Create the root simulation elements
+- add the metadata nodes: title, author, type, and description
+- create a parameters node and add inside of it doubleParameter or StringParameter Nodes
+- Create the default simulation settings nodes: cellShapeType, gridEdgeType, neighborArrangementType
+- Create the grid dimension and default speed nodes: width, height, defaultSpeed
+- Define the initial Cell States: create an initialCells node, add a row element per row and then create a cell element 
+the cell elememts must have a state attribute all other attributes can be simulation specific doubles
+- the additional simulation rule elements you need are the acceptedState element and the neighborRadius element
+- Make sure to align your values to the correct type and if a string is used made sure it matches a enum defined in configInfo or Logic.
 
 #### Model:
 **Adding a Simulation Type:**
@@ -225,3 +278,9 @@ Currently, this functionality was implemented with if statements due to the lack
   Now that we have a proper API system, this feature could be implemented quickly if we had time. All we need to do is 
   add a mouse click listener to the cell (which is a polygon JavaFX element) and submit the event to the API.
 
+#### Configuration: 
+
+* CELL-32C	Pattern to Insert
+  * We didn't implement this feature because we thought it would require us to change our 
+  configuration structure quite a bit. This would also make us change the view quite a bit 
+  as we would have to implement a way for users to insert the patterns.
