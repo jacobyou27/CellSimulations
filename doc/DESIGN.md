@@ -33,6 +33,20 @@
 
 ## Design goals
 
+#### Configuration:
+
+**Abstract enough config data conventions** - to make the configuration xml data file conventions as abstract as possible
+- the cells can have their own properties
+- the parameters are defined as double or strings
+
+**Easy to get to data** - to make sure that the simulation data that the user wants is easily accessible to the rest of the code
+- ConfigInfo class contains all the necessary information for the code
+
+**Save the XML data** - to allow for the saving of xml files
+ - the ConfigWriter class has a simple method where you just pass in the configInfo
+object and it can do the rest. 
+
+
 #### Model:
 
 **Easy Extensibility for New Simulations** - Allow adding new simulations without rewriting existing classes.
