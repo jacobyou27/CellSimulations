@@ -5,6 +5,9 @@ import cellsociety.model.config.ConfigReader;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import javax.xml.parsers.ParserConfigurationException;
+
+
 
 /**
  * Tests for ConfigReader class.
@@ -32,14 +35,104 @@ import static org.junit.jupiter.api.Assertions.*;
  * Use the ZOMBIES acronym to help you remember to consider these questions when coming up with useful scenarios to test the program:
  *
  */
-public  class  ConfigReaderTest{
+public class ConfigReaderTest {
+
   ConfigReader configReader = new ConfigReader();
 
-  //make sure the getFiles Names is not empty
+  // Ensures that getFileNames returns a non-empty list when config directory has files
   @Test
-  void getFileNames_isNotEmpty() {
+  void getFileNames_ConfigDirectoryHasFiles_IsNotEmpty() {
     assertFalse(configReader.getFileNames().isEmpty());
+    System.out.println(configReader.getFileNames());
   }
-  //TODO create a second test for getFileNames
 
+  @Test
+  void readConfig_InvalidGridBounds_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorGridBounds.xml"));
+    System.out.println("[ErrorGridBounds.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_CellMissingStateAttribute_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorCellMissingStateAttribute.xml"));
+    System.out.println("[ErrorCellMissingStateAttribute.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_MissingTitleParameter_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorMissingTitleParameter.xml"));
+    System.out.println("[ErrorMissingTitleParameter.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_ProportionsExceedLimit_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorProportionsExceedLimit.xml"));
+    System.out.println("[ErrorProportionsExceedLimit.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_ParamMissingName_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorParamMissingName.xml"));
+    System.out.println("[ErrorParamMissingName.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_TooManyTotalStates_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorTooManyTotalStates.xml"));
+    System.out.println("[ErrorTooManyTotalStates.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_EmptyInitialCells_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorEmptyInitialCells.xml"));
+    System.out.println("[ErrorEmptyInitialCells.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_InvalidAcceptedStateValue_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorInvalidAcceptedStateValue.xml"));
+    System.out.println("[ErrorInvalidAcceptedStateValue.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_InvalidValue_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorInvalidValue.xml"));
+    System.out.println("[ErrorInvalidValue.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_MultipleGridConfigurationElements_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorMultipleGridConfigurationElements.xml"));
+    System.out.println("[ErrorMultipleGridConfigurationElements.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_InvalidProportionValue_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorInvalidProportionValue.xml"));
+    System.out.println("[ErrorInvalidProportionValue.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_InvalidValueInDoubleParam_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorInvalidValueInDoubleParam.xml"));
+    System.out.println("[ErrorInvalidValueInDoubleParam.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_InvalidCellState_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorInvalidCellState.xml"));
+    System.out.println("[ErrorInvalidCellState.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_EmptyRow_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorEmptyRow.xml"));
+    System.out.println("[ErrorEmptyRow.xml] " + e.getMessage());
+  }
+
+  @Test
+  void readConfig_AcceptedStatesEmpty_ThrowsParserConfigurationException() {
+    Exception e = assertThrows(ParserConfigurationException.class, () -> configReader.readConfig("ErrorAcceptedStatesEmpty.xml"));
+    System.out.println("[ErrorAcceptedStatesEmpty.xml] " + e.getMessage());
+  }
 }

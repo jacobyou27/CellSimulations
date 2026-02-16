@@ -1,0 +1,173 @@
+<?xml version="1.0" ?>
+<simulation>
+
+
+  <type>DARWIN</type>
+
+
+  <title>Darwin Crazy Frog</title>
+
+
+  <author>Billy McCune</author>
+
+
+  <description>
+    A Froggy boy that loves to jump.
+  </description>
+
+
+
+  <parameters>
+
+    <doubleParameter name="nearbyAhead">2</doubleParameter>
+
+  </parameters>
+
+
+
+  <cellShapeType>Square</cellShapeType>
+
+
+  <gridEdgeType>BASE</gridEdgeType>
+
+
+  <neighborArrangementType>Moore</neighborArrangementType>
+
+
+
+
+  <width>15</width>
+
+
+  <height>5</height>
+
+
+  <defaultSpeed>10</defaultSpeed>
+
+
+
+  <initialCells>
+
+
+    <row>
+
+
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+
+    </row>
+
+
+    <row>
+
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+
+    </row>
+
+
+    <row>
+
+
+      <cell state="0" speciesID="2"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+
+
+    </row>
+
+
+    <row>
+
+
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="4"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+
+
+    </row>
+
+
+    <row>
+
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+      <cell state="0" speciesID="0"/>
+
+
+
+
+    </row>
+
+
+  </initialCells>
+
+
+
+  <acceptedStates>0 </acceptedStates>
+
+
+  <neighborRadius>1</neighborRadius>
+</simulation>

@@ -7,6 +7,9 @@ import cellsociety.model.data.cells.CellFactory;
 import org.junit.jupiter.api.Test;
 import cellsociety.model.data.states.State;
 
+/**
+ * @author Jacob You
+ */
 public class CellFactoryTest {
 
   private enum TestState implements State {
@@ -23,8 +26,9 @@ public class CellFactoryTest {
 
     public static TestState fromInt(Class<TestState> enumClass, int value) {
       for (TestState s : enumClass.getEnumConstants()) {
-        if (s.getValue() == value)
+        if (s.getValue() == value) {
           return s;
+        }
       }
       return enumClass.getEnumConstants()[0];
     }

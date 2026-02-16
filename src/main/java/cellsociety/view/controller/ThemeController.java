@@ -1,10 +1,15 @@
 package cellsociety.view.controller;
 
-import cellsociety.view.scene.SceneUIWidget;
+import cellsociety.view.scene.SceneUIWidgetFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * A controller class that manages the theme of the program.
+ *
+ * @author Hsuan-Kai Liao
+ */
 public class ThemeController {
 
   // CSS style path
@@ -39,7 +44,8 @@ public class ThemeController {
 
   /**
    * Get the theme sheet for the given theme and component.
-   * @param theme the theme
+   *
+   * @param theme     the theme
    * @param component the component
    * @return the theme sheet
    */
@@ -47,9 +53,9 @@ public class ThemeController {
     try {
       return Objects.requireNonNull(component.themeSheetFilePaths.get(theme));
     } catch (NullPointerException e) {
-      SceneUIWidget.createErrorDialog("Theme Error", "The theme " + theme + " was not found.", e);
+      SceneUIWidgetFactory.createErrorDialog("Theme Error",
+          "The theme " + theme + " was not found.", e);
     }
-
     return null;
   }
 }

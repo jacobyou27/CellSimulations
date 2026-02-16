@@ -5,23 +5,26 @@ import javafx.application.Application;
 import javafx.stage.Stage;
 
 /**
- * Thew entry point of the program, which sets up the main scene and game loop.
+ * The entry point of the program, which sets up the main scene and game loop.
+ * @author Hsuan-Kai Liao, Billy McCune, Jacob You
  */
 public class Main extends Application {
+
   public static final int FRAMES_PER_SECOND = 60;
 
   @Override
   public void start(Stage primaryStage) {
     // Set up the title of the primary stage
-    primaryStage.setTitle("Game of Life Simulation");
+    primaryStage.setTitle("Cell Society Simulation");
 
     // Create the main scene
     SimulationScene mainScene = new SimulationScene(primaryStage);
-    mainScene.start(FRAMES_PER_SECOND);
+    mainScene.start(FRAMES_PER_SECOND, true);
   }
 
   /**
    * Start the program, give complete control to JavaFX.
+   *
    * @param args command line arguments
    */
   public static void main(String[] args) {

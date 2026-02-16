@@ -1,39 +1,325 @@
 # Cell Society Design Final
-### TEAM NUMBER
-### NAMES
+### TEAM NUMBER: 1
+### NAMES: Billy McCune, Hsuan-Kai Liao
 
 
 ## Team Roles and Responsibilities
 
- * Team Member #1
+ * Team Member #1: Jacob You
 
- * Team Member #2
+    * Simulation Data: Create the base structure for storing data with cells and grids
+    * Logic Creation: Create all classes designating the logic requirements for each simulation
+    * Neighbor Calculation: Calculate the neighbors of a specific cell according to different simulation parameters
 
- * Team Member #3
 
+ * Team Member #2: Billy McCune
+
+   * Configuration Creation: To create the structure and standards for the configuration files 
+   and to write the files themselves. 
+   * API creator: To create the two Api's: model and config. 
+   * API implementer: To edit the files within the project to maintain model-view seperation and to replace all calls 
+   in the view to use the Api's.
+   * Simulation Style Manager: Create the data files and process to manager the user defined simulation style preferences.
+   
+ * Team Member #3: Hsuan-Kai Liao
+   * GUI Formatting: To format the basic GUI outlook, and separate the functionalities to each section.
+   * Scene Rendering: To render the grid, cell, and their corresponding colors to the scene, based on the given rendering
+   attributes in the model.
+   * Localization: To make several language support for all the "text" elements in the simulation scene.
+   * CSS and Theme: To make different styles for the simulations, and allow customizable css files loading.
+   * Logging System: To Log and track all the message and errors happening during run time, and print them out on the
+   scene.
 
 
 ## Design goals
 
+#### Configuration:
+
+**Abstract enough config data conventions** - to make the configuration xml data file conventions as abstract as possible
+- the cells can have their own properties
+- the parameters are defined as double or strings
+
+**Easy to get to data** - to make sure that the simulation data that the user wants is easily accessible to the rest of the code
+- ConfigInfo class contains all the necessary information for the code
+
+**Save the XML data** - to allow for the saving of xml files
+ - the ConfigWriter class has a simple method where you just pass in the configInfo
+object and it can do the rest. 
+
+
+#### Model:
+
+**Easy Extensibility for New Simulations** - Allow adding new simulations without rewriting existing classes.
+- State interface for creating new enum states easily.
+- Logic class (with reflection for parameters) so each new simulation can plug in its own rules.
+- Property maps in Cell to store extra simulation-specific data.
+
+**Flexible Neighbor & Grid Configurations** - Support different neighbor types, shapes, and edges.
+
+- NeighborCalculator uses property files and BFS/raycasting to handle multiple shapes and neighbor definitions.
+- Enums and reflection/factory logic to avoid hardcoding.
+
+**Separation of View Concerns** - Keep the model decoupled from the view.
+
+- Logic manipulates Grid/Cell data behind an API; the UI only renders the grid via a separate controller.
+- The model’s two-phase update (setting nextState before calling updateGrid()) ensures the view can display a stable frame at any time.
+
+**Data-Driven Configuration** - Reduce code changes when new simulations or neighbor definitions are introduced.
+- External .properties files that define neighbor offsets, default parameter values, etc.
+- Reflection-based loading of strategies or enumerations, minimizing if-else logic.
+
+
+#### View:
+  * The interface is clean and visually appealing,
+     * Good UX, intuitive, and easy to understand
+  * A modular widget system, where most major components are created through
+    `SceneUIWidgetFactory` and have independent unit tests.
+  * Callbacks are completely separated from the model, with communication between callbacks and APIs
+    handled through SceneController
+
 #### What Features are Easy to Add
 
+
+#### Configuration
+
+ - **Configuration file**: A new configuration file specifying a a simulation type is simple. Just create an xml document and format it according an example simulation xml of the same simulation type.
+
+- **Configuration Information**: If you want to include another node in your xml you just need to change the configInfo file, read the node in the xml, and then add it to the configInfo instances where the program makes a new configInfo object.
+
+#### Model:
+ - **State class**: A new enum class implementing State must be defined with desired enum values. getValue() must be implemented, typically simply returning the value of the current enum state. This class is very simple to extend.
+- **Logic Class**: A new logic class implementing Logic must be defined with the desired interactions, and must implement updateSingleCell(), the logic that should be called on all applicable cells. Helpers to load paramaters and check boundaries and a structure to update the grid are provided in Logic to make it easier to create and extend.
+
+
+- **New Cell Parameters**: Cells contain infrastructure to hold a dictionary of double parameters, defined by strings. This implementation makes it simple to create a new parameter for a new simulation, keeping the implementation of Cells identical for all simulations without any additional code.
+
+
+- **Neighbor Types, Grid Shape, Edge Types**: The only changes needed to extend involve changing the CellNeighbor property file and adding the logic for the new neighbor types and edge types.
+
+
+#### View:
+   * Grid Tiling and Cell Shape: Different grid tiling patterns and cell shapes are possible because we’ve abstracted 
+   the drawer. When adding new shape features, all you need to do is create a new drawer class that inherits from the 
+   GridDrawer abstract class and implement drawGridContents and drawGridBound, which is easy to extend.
+
+   * Zooming In and Out of the Grid: Since our view's UI is generated by SceneUIWidgetFactory, most of the callbacks and 
+   content are handled by the factory itself. In the scene, we don’t need to worry about how to manipulate the grid 
+   because that part is managed separately. When implementing this feature, there’s no need to modify the interaction 
+   between the view and model—just add drag and zoom listeners in the factory and handle them accordingly.
 
 ## High-level Design
 
 #### Core Classes
 
 
+#### Configuration:
+
+**ConfigInfo**:
+ - ConfigInfo is a record that implements the design of a record pattern. It provides the information for the configuration information after it is read.
+ - Subclasses: CellRecord: the storage class used the store cell info and ParameterRecord a storage class used to store the Parameter Information
+
+**ConfigReader**:
+- The ConfigReader class reads the configInformation and creates a configInfo object
+- Subclasses used by the configReader are: GridReader which is responsible for reading and parsing the grid and the RandomStatesAndProportionsGridReader class which is used
+by the gridReader class when the xml document specifies that it has random state or proportions to define the cell structures
+
+**ConfigWriter**:
+ - The configWrite class is responsible for the creation of the xml documents when a user wants to save a simulation
+
+#### Model:
+
+**State**:
+- State is an abstract class that implements the State design pattern. It provides an interface for enum state classes to allow for abstraction.
+- Subclasses of State are enums, pairing an integer value with an enumerated value typically representing one of the possible states a cell can be in a simulation.
+- State subclasses can convert from integer to enum, and from enum back to integer.
+
+
+**Cell**:
+- Cell is a class that implements the State design pattern. It represents a single cell in a larger simulation grid.
+- Cell holds a current and next state, allowing for the instantaneous switch to the next simulation step at any time.
+- Cell holds properties other than state, such as shark energy, sugar amount, etc. These values are accessible through a property map, and use string key values to allow all simulations to use the same class.
+- Cell contains a queue that can be used for any implementations that require it, such as Darwin.
+- Cell holds a mapping of all of its neighbor Cells and the direction they are in.
+- Logic reads and changes the many data values of the cell.
+
+
+**Grid**:
+- Grid is a class that implements the Composite design pattern. It represents the entire simulation area and the simulation properties.
+- Grid holds each of the cells and their properties in a 2D array. Other classes access the cells using the getCell() method and coordinates.
+- Grid initializes all cells by reading the CellRecord class, using the CellFactory class to make new cells of specific states, then assigns cell properties. Then, after creating the cells, it assigns all neighbors using NeighborCalculator.
+- Grid has methods to set and get the edge type, neighbor type, and grid shape, affecting the neighbor assignment.
+- Grid has an update() function to change the state of every cell from the current state to the next state.
+
+
+**NeighborCalculator**:
+- NeighborCalculator is a class that implements the Strategy design pattern. It is a helper class of the Grid class and returns all of the neighbors of a cell based on the given simulation properties.
+- Neighbor Calculator takes the CellNeighbor property file and the assigned grid properties and uses breadth first search to find all neighbors any given number of spaces away.
+- Neighbor Calculator utilizes the RaycastImplementor and the raycasting helper classes in order to get all neighbors in a direction any given number of spaces away. This type of neighbor is used and assigned in Logic classes that require this unique type of neighbor assignment strategy.
+
+
+**Logic**:
+- Logic is a class that implements the Strategy design pattern. It runs the simulation, updates cell states accordingly, and is the component that changes and utilizes all of the other model components.
+- The Logic superclass has methods to read the default, max, and min values of any parameter specified in the property files. It also contains the most basic implementation of updating the grid, calling updateSingleCell on every cell.
+- The Logic subclasses must implement their own implementation of updateSingleCell according to the simulation specifications. At the end of each update cycle, the grid update() function should be called in standard scenarios.
+- The Logic subclasses must implement setter and getter methods for each expected parameter. Reflection is used to retrieve these methods, so naming is important. Upon getting the min and max allowed values of the parameter, the method should call checkBounds to ensure the specified number is valid, or it will throw an exception. Otherwise, the value will be set.
+
+
+#### View:
+
+**Main Functionality**:
+- SimulationScene is a class that implements the Scene interface. It is the main class that holds the scene and all of the UI elements.
+- SceneController handles all scene UI events and interacts with both modelAPI and configAPI. It serves as the core logic processor for the entire scene.
+- Language/ThemeController is the global controller for localization and theme management. It provides methods for hot reloading localization and themes and serves as the primary class responsible for binding UI text and styles.
+
+**UI Formatting**:
+- Docker/DWindow is the core of the entire docking system and the backbone of our UI formatting. It provides interfaces for binding standard JavaFX UI components to specific windows and serves as the container for the entire display interface.
+- SceneUIWidgetFactory is a wrapper for the entire JavaFX UI. It encapsulates commonly used components, allowing us to maintain a consistent style when creating UI elements.
+
+**Rendering**:
+- GridDrawer is an abstract parent class for drawing grids. It is primarily designed for subclass inheritance, allowing the implementation of specific methods to render different cell shape tiling styles. This abstract class enables flexible expansion for various grid display styles.
+- SceneRenderer is a further encapsulation of GridDrawer. It is a purely static class, and the scene utilizes its APIs to render the model.
+
+
 ## Assumptions that Affect the Design
+
+
+#### Configuration: 
+
+- **Assumption**: The xml data in the files is mostly correct. If the xml data file is not formated correctly errors will be thrown
+but usually as an assumption xml files are of a certain format. 
+
+- **Assumption**: A cell will only have doubles properties. In the cellRecord class we currently only store a map of string to doubles for the cell properties.
+
+#### Model:
+- **Assumption: There are a set number of states for all simulations** - 
+This made it really easy to make states for most simulations, as pairing integers and enums was incredibly simple. However, this proved to be a serious problem when tackling Bacteria. Enums could not represent the states, and things that used states, such as all of the model classes, color mangement, and config reading, would not work. We stuck with enums, instead using a dummy enum that held no values. Instead, the real value would be saved in the cell properties.
+
+- **Assumption: The grid will always have a square layout** - This made making the grid and square implementations of the grid easy, as a square coordinate system is very easy to represent with a 2D array. This made implementation of new shapes difficult, as having multiple different shapes would be especially hard for a 2D grid not built to handle these shapes. We were forced to map the new shapes onto the 2D grid, coming up with systems to translate the neighbors of the different shapes onto our original logic for squares.
+
+- **Assumption: Cells will only ever need to store double properties** - This assumption meant that we could keep all of the cell data in one simple mapping of property name to a double. However, this meant that in the future, properties that required string values would be impossible without new implementation. This was somewhat the case in Darwin, where I added a queue to the Cell properties as a seperate variable, requiring different functions.
+
+
+#### View:
+   * Reusability of UI Widgets: A lot of UI components, like buttons and dropdown lists, are likely to be reused. 
+   That’s why it makes sense to put them in a factory, so they can be easily reused across the project.
+   * Separation of Models: Elements in the scene or any other view shouldn’t have direct access to the model. Instead, 
+   they should get the necessary data through an API and use it directly within the scene.
 
 #### Features Affected by Assumptions
 
+ * View:
+   * Mini-Grid: We chose this feature to demonstrate that our model-view separation is well-structured. Any display 
+   changes in the view won’t affect the model’s calculations or API. The scene simply needs to call each grid cell's 
+   respective color, and that’s render it onto the scene.
+
 
 ## Significant differences from Original Plan
+
+
+#### Configuration:
+
+- **Difference: Configuration Reading is split up** - we originally planned for the configReader class to handle all the reading functionality. However, as the class got bigger and bigger I felt it was necessary to break of the configReader class. To avoid too much refactoring I and to maintain high abstraction I created the subclasses for the grid reading.
+
+
+- **Difference: ConfigInfo Record Class** - we did not plan to use a record class to contain the configInfo this changed once we knew what a record class was.
+
+#### Model
+
+- **Difference: Consolidating simulation-specific Cell classes into one** - Originally, because different simulations had different parameters,  thought to make each simulation have its own cell with its own set properties. However, I felt that this was rather unnecessary, as the only difference between each cell were the properties it was storing. Instead, making a cell that could store any type of property and retrieve the correct ones using a map seemed much easier to understand, and I implemented this instead.
+
+
+- **Difference: Adding nextState for cells and updating all Cells at once** - I used to set cells to their new states as soon as I calculated their next state. However, this caused issues, as the grid would be in between states, and cells in the previous state would read cells that had already updated, causing logic bugs. Instead, I made a variable to hold the next state of the cell, and used grid to update all cells to their next state.
+
+
+- **Difference: Cells no longer know their location** - Cells used to hold their own location, as this made it incredibly easy for it to find its own neighbors. However, this was unnecessary and broke some aspects of encapsulation. Instead, as the only reason the cell had its coordinates was to find its neighbors, the grid would find the cell's coordinates instead.
+
+- **Difference: Making neighbor assignment not simulation specific** - Initially, I used if statements to determine which neighbor assigmnent strategy to use for each simulation. However, this broke the OCP, and I opted to have each Logic specifically assign different neighbor assignment algorithms. After this, neighbor assignment options became user defined, requiring me to make the neighbor assignment algorithm determined solely by the user, creating constant enums for each of the neighbor assigment modifications.
+
+
+#### View:
+   * SceneController: Before implementing APIs, we didn’t fully realize the importance of APIs. The SceneController 
+  originally served as a bridge between the model and view, containing code that handled various aspects of the system. 
+  However, after integrating APIs, the controller in the view is no longer just a simple link between the model and view.
+  Instead, it has become the core of the scene’s operation, responsible for interacting with the API—making it slightly 
+  different from the purely UI-driven interactions in SimulationScene.
+   * GridDrawer: Our original plan was for all grids and cells to remain rectangular—at least logically—so we didn’t 
+  initially create an abstract grid drawing class. However, as new requirements emerged, we realized the need to abstract 
+  grid shapes. To accommodate this, we rewrote the entire SceneRenderer logic and introduced the concept of a Drawer 
+  abstract class, allowing us to efficiently support different grid shapes.
 
 
 ## New Features HowTo
 
 #### Easy to Add Features
 
-#### Other Features not yet Done
+#### Configuration:
 
+**Adding a Simulation File**
+- Create a new xml file and name it something appropriate
+- add the xml header
+- Create the root simulation elements
+- add the metadata nodes: title, author, type, and description
+- create a parameters node and add inside of it doubleParameter or StringParameter Nodes
+- Create the default simulation settings nodes: cellShapeType, gridEdgeType, neighborArrangementType
+- Create the grid dimension and default speed nodes: width, height, defaultSpeed
+- Define the initial Cell States: create an initialCells node, add a row element per row and then create a cell element 
+the cell elememts must have a state attribute all other attributes can be simulation specific doubles
+- the additional simulation rule elements you need are the acceptedState element and the neighborRadius element
+- Make sure to align your values to the correct type and if a string is used made sure it matches a enum defined in configInfo or Logic.
+
+#### Model:
+**Adding a Simulation Type:**
+- Decide on a name for the simulation. Add it to the ConfigInfo enum list of simulations.
+- Make a new State superclass, naming it (name)State. It must be an enum. Specify the mapping of integer values to enum states you wish to have. Create a constructor that takes in a value and assigns it to the enum's value. Then implement the getValue() function to return the value of the enum.
+- Make a new Logic class, naming it (name)Logic. It should contain instance variables for each of the parameters you wish to include. In the initialization, call the superclass, passing the grid and simulation parameters.
+  - Define the min, max, and default in the Parameters.properties file, following the naming convention (state name).(parameter name).(min/max/default).
+  - Create setters for each parameter, naming them set(parameter name). In the setters, retrieve the min and max using getMinParam and getMaxParam from the superclass. Use checkBounds() to ensure that the passed in value is within the min and max, then set the instance variable to the value.
+  - Create getters for all parameters where you simply return them with the same naming convention.
+  - In the initialization, use the setters to set each parameter to getDoubleParamOrFallback(parameter name), which sets the specificed parameter to the given values from the XML, or sets it to default if invalid
+- Override updateSingleCell(), implementing logic functionality for one individual cell
+- If necessary, override and change update() to desired functionality.
+
+
+**Adding a New Cell Shape:**
+- Decide on a name for the cell shape. Add it to the ConfigInfo enum list of cell shapes.
+- Add the shape to CellNeighbor.properties, and use the direction tuples to designate which directions you want a cell to consider its neighbor. Do this for all neighbor assignment types, and use the naming (Cell shape)_(Neighbor type).
+- Add any necessary additional logic in NeighborCalculator, such as potentially flipping the y value on even rows.
+- Create a new RaycastStrategy for the shape, creating a mapping of enums and directions you want to raycast in.
+  - In doRaycast, given a direction and the location of the cell, implement logic to find the cell in that direction for the specified number of steps, utilizing RaycastStepHelper.doSingleStep().
+
+
+**Adding a New Neighbor Type:**
+- Decide on a name for the neighbor type. Add it to the ConfigInfo enum list of neighbor types.
+- Add the shape to CellNeighbor.properties, and use the direction tuples to designate which directions you want a cell to consider its neighbor. Do this for all cell shapes, and use the naming (Cell shape)_(Neighbor type).
+
+#### View:
+
+* CELL-50X Cell Shape: Custom
+  * Since we abstracted the GridDrawer concept, this feature is easy to implement using polymorphism. Creating a new 
+  grid tiling is as simple as defining a new class that inherits from GridDrawer and implementing the drawGridContents 
+  and drawGridBound methods.
+
+#### Other Features not yet Done.
+
+#### Model:
+
+
+**Adding a New Edge Type:**
+Currently, this functionality was implemented with if statements due to the lack of time. In a polished implementation, edge types would be implemented as a method in NeighborCalculator that would return the new row and column after taking the potentially out of bounds coordinates in depending on the edge type. The method would be specified with reflection. This is assuming this implementation is added.
+- Decide on a name for the edge type. Add it to the ConfigInfo enum list of edge types.
+- Create a new method in NeighborCalculator with the name (edge type)Calculator. It should take in a row and column. If out of bounds, it should apply the desired logic and return the row and column.
+
+#### View
+
+* CELL-45B Dynamic Updates: Grid States
+  * We didn’t implement this feature before because, prior to the "Change," we didn’t have a well-structured API system 
+  to separate the view and model. As a result, many view-related functions were embedded within SceneController.
+  Now that we have a proper API system, this feature could be implemented quickly if we had time. All we need to do is 
+  add a mouse click listener to the cell (which is a polygon JavaFX element) and submit the event to the API.
+
+#### Configuration: 
+
+* CELL-32C	Pattern to Insert
+  * We didn't implement this feature because we thought it would require us to change our 
+  configuration structure quite a bit. This would also make us change the view quite a bit 
+  as we would have to implement a way for users to insert the patterns.

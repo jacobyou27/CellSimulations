@@ -1,61 +1,95 @@
 package cellsociety.view.scene;
 
+import static java.lang.Math.abs;
+
 import cellsociety.logging.Log;
+import cellsociety.view.controller.LanguageController;
+import cellsociety.view.controller.LanguageController.Language;
+import cellsociety.view.controller.SceneController;
 import cellsociety.view.controller.ThemeController;
 import cellsociety.view.controller.ThemeController.Theme;
 import cellsociety.view.controller.ThemeController.UIComponent;
+import cellsociety.view.docking.DWindow;
 import cellsociety.view.docking.Docker;
 import cellsociety.view.docking.Docker.DockPosition;
-import cellsociety.view.controller.SceneController;
+import cellsociety.view.renderer.SceneRenderer;
+import cellsociety.view.renderer.drawer.GridDrawer;
 import java.io.File;
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
+import javafx.scene.shape.Shape;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
 /**
- * The SimulationScene class represents the main scene of the application where the simulation is displayed.
- * This is a pure UI class that is responsible for setting up the JavaFX scene and updating the UI components.
+ * The SimulationScene class represents the main scene of the application where the simulation is
+ * displayed. This is a pure UI class that is responsible for setting up the JavaFX scene and
+ * updating the UI components.
  *
  * @author Hsuan-Kai Liao
  */
 public class SimulationScene {
+
   // Constants
-  public static final double DEFAULT_WIDTH = 1200;
-  public static final double DEFAULT_HEIGHT = 700;
+  public static final double DEFAULT_WIDTH = 1300;
+  public static final double DEFAULT_HEIGHT = 800;
 
-  public static final double MAX_SPEED = 100;
-  public static final double MIN_SPEED = 0;
-  public static final double SPEED_MULTIPLIER = 3;
-  public static final String SPEED_TOOLTIP = "Change the speed of the simulation";
+  public static final double NEW_SIMULATION_OFFSETX = 50;
+  public static final double NEW_SIMULATION_OFFSETY = 50;
 
-  public static final double BUTTON_WIDTH = 80;
-  public static final double BUTTON_HEIGHT = 35;
-  public static final double MAX_BUTTON_WIDTH = 200;
+  public static final Theme DEFAULT_THEME = Theme.DAY;
+  public static final Language DEFAULT_LANGUAGE = Language.ENGLISH;
 
-  // UI components
-  private Button startPauseButton;
-  private GridPane grid;
-  private VBox parameterBox;
-  private ComboBox<String> selectType;
-  private TextField directoryField;
-  private Label infoText;
+  // Static variables
+  private static Theme currentTheme;
+  private static Language currentLanguage;
 
   // Instance variables
   private final Stage primaryStage;
   private final Docker docker;
   private final SceneController controller;
 
-  private double updateInterval;
-  private double timeSinceLastUpdate;
+  // UI components
+  private Button startPauseButton;
+  private Pane grid;
+  private Pane miniGrid;
+  private VBox parameterBox;
+  private VBox colorBox;
+  private ComboBox<String> selectSimulationType;
+  private ComboBox<String> selectCellShape;
+  private ComboBox<String> selectEdgePolicy;
+  private ComboBox<String> selectNeighborArrangement;
+  private ComboBox<String> selectTheme;
+  private ComboBox<String> selectLanguage;
+  private TextField directoryField;
+  private Label infoText;
+  private int framesPerSecond;
+  private boolean doShowBorder = true;
 
   /**
    * Constructor for the SimulationScene class
+   *
    * @param primaryStage the primary stage of the application
    */
   public SimulationScene(Stage primaryStage) {
@@ -65,53 +99,134 @@ public class SimulationScene {
     this.primaryStage = primaryStage;
     this.docker = new Docker(primaryStage);
     this.controller = new SceneController(this);
-    this.updateInterval = 2.0 / (MAX_SPEED + MIN_SPEED);
-    this.timeSinceLastUpdate = 0.0;
 
     // Create the UI components
     Pane gridParent = createGrid();
+    VBox.setVgrow(gridParent, Priority.ALWAYS);
     ScrollPane controls = createControls();
+    ScrollPane stylePanel = createStylesPanel();
     ScrollPane infoLabel = createInfoPanel();
     ScrollPane parameterPanel = createParameterPanel();
-    VBox.setVgrow(gridParent, Priority.ALWAYS);
+    ScrollPane colorPanel = createColorPanel();
+    ScrollPane logPanel = createLogPanel();
 
     // Create a floating window for each component
-    docker.createDWindow("Controls", controls, DockPosition.TOP);
-    docker.createDWindow("Info", infoLabel, DockPosition.TOP);
-    docker.createDWindow("Grid", gridParent, DockPosition.RIGHT);
-    docker.createDWindow("Parameters", parameterPanel, DockPosition.RIGHT);
+    docker.createDWindow(LanguageController.getStringProperty("controls-window"), controls,
+        DockPosition.TOP, null);
+    docker.createDWindow(LanguageController.getStringProperty("styles-window"), stylePanel,
+        DockPosition.BOTTOM, null);
+    docker.createDWindow(LanguageController.getStringProperty("grid-window"), gridParent,
+        DockPosition.RIGHT, null);
+    DWindow colorWindow = docker.createDWindow(
+        LanguageController.getStringProperty("colors-window"),
+        colorPanel, DockPosition.RIGHT, null);
+    DWindow parameterWindow = docker.createDWindow(
+        LanguageController.getStringProperty("parameters-window"), parameterPanel,
+        DockPosition.CENTER, colorWindow);
+    DWindow logWindow = docker.createDWindow(LanguageController.getStringProperty("log-window"),
+        logPanel, DockPosition.BOTTOM, parameterWindow);
+    docker.createDWindow(LanguageController.getStringProperty("info-window"), infoLabel,
+        DockPosition.CENTER, logWindow);
     docker.reformat();
-
-    // Set the default style
-    setUIStyle(Theme.DAY);
   }
+
+  private static Text processAnsiCodes(String message) {
+    BiFunction<String, String, Text> createTextNode = (text, colorStyle) -> {
+      Text textNode = new Text(text + "\n");
+      textNode.getStyleClass().add("log-text-" + colorStyle);
+      return textNode;
+    };
+
+    if (message.startsWith(Log.ERROR_COLOR)) {
+      return createTextNode.apply(message.substring(Log.ERROR_COLOR.length()), "error");
+    } else if (message.startsWith(Log.WARN_COLOR)) {
+      return createTextNode.apply(message.substring(Log.WARN_COLOR.length()), "warn");
+    } else if (message.startsWith(Log.INFO_COLOR)) {
+      return createTextNode.apply(message.substring(Log.INFO_COLOR.length()), "info");
+    } else if (message.startsWith(Log.TRACE_COLOR)) {
+      return createTextNode.apply(message.substring(Log.TRACE_COLOR.length()), "trace");
+    } else {
+      return createTextNode.apply(message, "default");
+    }
+  }
+
+  /* PRIVATE UI SETUP METHODS */
 
   /**
    * Start the simulation scene with the given frames per second
+   *
    * @param framesPerSecond the number of frames per second
    */
-  public void start(int framesPerSecond) {
-    // Create the splash screen
-    SceneUIWidget.createSplashScreen("English", Theme.DAY, this::splashScreenLanguageCallback, this::splashScreenThemeCallback, () -> {
-      // Log the welcome
-      Log.info("Welcome to Cell Society! This simulation is made by Jacob You, Hsuan-Kai Liao, and Billy McCune.");
+  public void start(int framesPerSecond, boolean showSplashScreen) {
+    this.framesPerSecond = framesPerSecond;
 
+    // Callback to start the simulation
+    Runnable startSimulationCallback = () -> {
       // Show the primary stage
       primaryStage.show();
 
       // Set up the game loop
       Timeline gameLoop = new Timeline();
       gameLoop.setCycleCount(Timeline.INDEFINITE);
-      gameLoop.getKeyFrames().add(new KeyFrame(javafx.util.Duration.seconds(1.0 / framesPerSecond), e -> step(1.0 / framesPerSecond)));
+      gameLoop.getKeyFrames().add(
+          new KeyFrame(javafx.util.Duration.seconds(1.0 / framesPerSecond),
+              e -> controller.update(1.0 / framesPerSecond)));
       gameLoop.play();
-    });
+
+      // Set the default simulation
+      loadCallback(SceneController.DEFAULT_LOADED_SIMULATION_CONFIG);
+      selectSimulationType.setValue(SceneController.DEFAULT_LOADED_SIMULATION_CONFIG);
+
+      // Set the initial language and theme
+      selectTheme.setValue(
+          currentTheme.toString().substring(0, 1).toUpperCase() + currentTheme.toString()
+              .substring(1).toLowerCase());
+      selectLanguage.setValue(
+          currentLanguage.toString().substring(0, 1).toUpperCase() + currentLanguage.toString()
+              .substring(1).toLowerCase());
+    };
+
+    // Create the splash screen
+    if (showSplashScreen) {
+      // Set the initial language and theme
+      updateUIStyle(DEFAULT_THEME);
+      updateUILang(DEFAULT_LANGUAGE);
+
+      // Create the splash screen
+      SceneUIWidgetFactory.createSplashScreen(
+          LanguageController.getStringProperty("welcome-title"),
+          LanguageController.getStringProperty("welcome-button"),
+          LanguageController.getStringProperty("welcome-language"),
+          LanguageController.getStringProperty("welcome-theme"),
+          DEFAULT_LANGUAGE,
+          DEFAULT_THEME,
+          this::splashScreenLanguageCallback,
+          this::splashScreenThemeCallback,
+          () -> {
+            // Log the welcome
+            Log.info(
+                "Welcome to Cell Society! This simulation is made by Jacob You, Hsuan-Kai Liao, and Billy McCune.");
+
+            // Run the simulation
+            startSimulationCallback.run();
+          }
+      );
+    } else {
+      // Run the simulation
+      Log.trace("New simulation started.");
+
+      startSimulationCallback.run();
+    }
   }
 
-  /* PRIVATE UI SETUP METHODS */
-
   private Pane createGrid() {
-    this.grid = new GridPane();
-    return SceneUIWidget.dragZoomViewUI(grid);
+    grid = new Pane();
+    grid.getStyleClass().add("grid-panel");
+
+    miniGrid = new Pane();
+    miniGrid.getStyleClass().add("grid-panel");
+
+    return SceneUIWidgetFactory.dragZoomViewUI(grid, miniGrid);
   }
 
   private ScrollPane createParameterPanel() {
@@ -121,106 +236,221 @@ public class SimulationScene {
     parameterBox.setMinHeight(Region.USE_COMPUTED_SIZE);
     VBox.setVgrow(parameterBox, Priority.ALWAYS);
 
-    return SceneUIWidget.createContainerUI(parameterBox, "Parameters");
+    return SceneUIWidgetFactory.createContainerUI(parameterBox,
+        LanguageController.getStringProperty("parameters-panel"));
+  }
+
+  private ScrollPane createColorPanel() {
+    colorBox = new VBox(5);
+    colorBox.setAlignment(Pos.TOP_CENTER);
+    colorBox.getStyleClass().add("color-box");
+    colorBox.setMinHeight(Region.USE_COMPUTED_SIZE);
+    VBox.setVgrow(colorBox, Priority.ALWAYS);
+
+    return SceneUIWidgetFactory.createContainerUI(colorBox,
+        LanguageController.getStringProperty("colors-panel"));
   }
 
   private ScrollPane createControls() {
-    // Create title
-    Label controlsTitle = new Label("Controls");
-    controlsTitle.getStyleClass().add("controls-title");
-
     // Create buttons
-    startPauseButton = new Button("Start");
-    Button resetButton = new Button("Reset");
-    Button loadButton = new Button("Load");
-    Button saveButton = new Button("Save");
-    Button directoryButton = new Button("📂");
+    startPauseButton = SceneUIWidgetFactory.createButtonUI(
+        LanguageController.getStringProperty("start-button"), e -> startPauseCallback());
+    Button resetButton = SceneUIWidgetFactory.createButtonUI(
+        LanguageController.getStringProperty("reset-button"), e -> resetCallback());
+    Button newButton = SceneUIWidgetFactory.createButtonUI(
+        LanguageController.getStringProperty("new-button"), e -> newSimulationCallback());
+    Button loadButton = SceneUIWidgetFactory.createButtonUI(
+        LanguageController.getStringProperty("load-button"),
+        e -> loadCallback(selectSimulationType.getValue()));
+    Button saveButton = SceneUIWidgetFactory.createButtonUI(
+        LanguageController.getStringProperty("save-button"),
+        e -> saveCallback(directoryField.getText()));
+    Button directoryButton = SceneUIWidgetFactory.createButtonUI(
+        LanguageController.getStringProperty("directory-button"), e -> directorySelectCallback());
 
-    // FIXME: IMPLEMENT SAVE
-    saveButton.setDisable(true);
-
-    // Set start button sizes
-    startPauseButton.setPrefWidth(BUTTON_WIDTH);
-    startPauseButton.setPrefHeight(BUTTON_HEIGHT);
-    startPauseButton.setMaxWidth(MAX_BUTTON_WIDTH);
-
-    // Set directory button sizes
-    directoryButton.setPrefWidth(BUTTON_WIDTH * 0.8);
+    // Set button sizes
+    directoryButton.setPrefWidth(SceneUIWidgetFactory.BUTTON_WIDTH * 0.8);
 
     // Set ComboBox
-    selectType = new ComboBox<>();
-    selectType.getItems().addAll("None");
-    selectType.setPrefWidth(BUTTON_WIDTH * 1.8);
-    selectType.setMaxWidth(MAX_BUTTON_WIDTH);
+    selectSimulationType = new ComboBox<>();
+    selectDropDownCallback();
+    selectSimulationType.setPromptText("...");
+    selectSimulationType.setOnMouseClicked(e -> {
+      String value = selectSimulationType.getValue();
+      selectDropDownCallback();
+      selectSimulationType.setValue(value);
+    });
+    selectSimulationType.setPrefWidth(SceneUIWidgetFactory.BUTTON_WIDTH * 1.8);
+    selectSimulationType.setMaxWidth(SceneUIWidgetFactory.MAX_BUTTON_WIDTH);
+    selectSimulationType.setPrefHeight(SceneUIWidgetFactory.BUTTON_HEIGHT);
 
     // Create directory text field
     directoryField = new TextField();
-    directoryField.setPromptText("None");
-    directoryField.setEditable(false);
-    directoryField.setPrefWidth((BUTTON_WIDTH - 10));
-    directoryField.setMaxWidth(MAX_BUTTON_WIDTH);
+    directoryField.setPromptText("...");
+    directoryField.setPrefWidth(SceneUIWidgetFactory.BUTTON_WIDTH - 10);
+    directoryField.setMaxWidth(SceneUIWidgetFactory.MAX_BUTTON_WIDTH);
+    directoryField.setPrefHeight(SceneUIWidgetFactory.BUTTON_HEIGHT);
 
-    // Link the width with the start button
-    resetButton.prefWidthProperty().bind(startPauseButton.widthProperty());
-    loadButton.prefWidthProperty().bind(startPauseButton.widthProperty());
-    saveButton.prefWidthProperty().bind(startPauseButton.widthProperty());
-
-    // Link the height with the start button
-    resetButton.prefHeightProperty().bind(startPauseButton.heightProperty());
-    loadButton.prefHeightProperty().bind(startPauseButton.heightProperty());
-    saveButton.prefHeightProperty().bind(startPauseButton.heightProperty());
-    selectType.prefHeightProperty().bind(startPauseButton.heightProperty());
-    directoryButton.prefHeightProperty().bind(startPauseButton.heightProperty());
-    directoryField.prefHeightProperty().bind(startPauseButton.heightProperty());
-
-    // Style buttons with colors
+    // Control buttons
     startPauseButton.getStyleClass().add("start-button");
     resetButton.getStyleClass().add("reset-button");
+    newButton.getStyleClass().add("new-button");
     loadButton.getStyleClass().add("load-button");
     saveButton.getStyleClass().add("save-button");
     directoryButton.getStyleClass().add("directory-button");
 
-    // Button callbacks
-    startPauseButton.setOnAction(e -> startPauseCallback());
-    resetButton.setOnAction(e -> resetCallback());
-    loadButton.setOnAction(e -> loadCallback(selectType.getValue()));
-    saveButton.setOnAction(e -> saveCallback(directoryField.getText()));
-    selectType.setOnMouseClicked(e -> selectDropDownCallback());
-    directoryButton.setOnAction(e -> directorySelectCallback());
+    // HBox formatting for each dx
+    HBox row1 = new HBox(10, startPauseButton, resetButton, newButton);
+    row1.setAlignment(Pos.CENTER);
+    row1.setPadding(new Insets(5));
 
-    // HBox formatting
-    HBox firstRow = new HBox(10, startPauseButton, loadButton, selectType);
-    firstRow.setAlignment(Pos.CENTER);
-    firstRow.setPadding(new Insets(5));
+    HBox row3 = new HBox(10, loadButton, selectSimulationType);
+    row3.setAlignment(Pos.CENTER);
+    row3.setPadding(new Insets(5));
 
-    HBox secondRow = new HBox(10, resetButton, saveButton, directoryField, directoryButton);
-    secondRow.setAlignment(Pos.CENTER);
-    secondRow.setPadding(new Insets(5));
+    HBox row4 = new HBox(10, saveButton, directoryField, directoryButton);
+    row4.setAlignment(Pos.CENTER);
+    row4.setPadding(new Insets(5));
 
-    // VBox box containing the control buttons
-    VBox controlsBox = new VBox(10, firstRow, secondRow);
+    // Create sections
+    BorderPane section1 = SceneUIWidgetFactory.createSectionUI(
+        LanguageController.getStringProperty("operations-section"), row1);
+    BorderPane section2 = SceneUIWidgetFactory.createSectionUI(
+        LanguageController.getStringProperty("io-section"), row3, row4);
+
+    // Main VBox containing all sections
+    VBox controlsBox = new VBox(10, section1, section2);
     controlsBox.setAlignment(Pos.CENTER);
     controlsBox.getStyleClass().add("controls-box");
     controlsBox.setPadding(new Insets(10));
     controlsBox.setMinHeight(Region.USE_COMPUTED_SIZE);
     VBox.setVgrow(controlsBox, Priority.ALWAYS);
 
-    return SceneUIWidget.createContainerUI(controlsBox, "Controls");
+    return SceneUIWidgetFactory.createContainerUI(controlsBox,
+        LanguageController.getStringProperty("controls-panel"));
+  }
+
+  private ScrollPane createStylesPanel() {
+    //#### Theme and Language selectors ####//
+    HBox themeLanguageSelectors = SceneUIWidgetFactory.createThemeLanguageSelectorUI(
+        LanguageController.getStringProperty("welcome-language"),
+        LanguageController.getStringProperty("welcome-theme"),
+        this::splashScreenLanguageCallback,
+        this::splashScreenThemeCallback
+    );
+    selectTheme = ((Map<String, ComboBox<String>>) themeLanguageSelectors.getUserData()).get(
+        "theme");
+    selectLanguage = ((Map<String, ComboBox<String>>) themeLanguageSelectors.getUserData()).get(
+        "language");
+
+    //#### Grid Style selectors ####//
+    HBox cellShapeSelector = SceneUIWidgetFactory.createDropDownUI(
+        LanguageController.getStringProperty("cell-shape-text"),
+        controller::getAllCellShapeNames,
+        controller::setCellShape
+    );
+    HBox edgeTypeSelector = SceneUIWidgetFactory.createDropDownUI(
+        LanguageController.getStringProperty("edge-policy-text"),
+        controller::getALlEdgePolicies,
+        controller::setEdgePolicy
+    );
+    HBox neighborTypeSelector = SceneUIWidgetFactory.createDropDownUI(
+        LanguageController.getStringProperty("neighbor-arrangement-text"),
+        controller::getAllNeighborArrangements,
+        controller::setNeighborArrangement
+    );
+    cellShapeSelector.setAlignment(Pos.CENTER_RIGHT);
+    edgeTypeSelector.setAlignment(Pos.CENTER_RIGHT);
+    neighborTypeSelector.setAlignment(Pos.CENTER_RIGHT);
+
+    selectCellShape = (ComboBox<String>) cellShapeSelector.getUserData();
+    selectEdgePolicy = (ComboBox<String>) edgeTypeSelector.getUserData();
+    selectNeighborArrangement = (ComboBox<String>) neighborTypeSelector.getUserData();
+
+    VBox styleSelectors = new VBox(10, cellShapeSelector, edgeTypeSelector, neighborTypeSelector);
+    styleSelectors.setAlignment(Pos.CENTER);
+    styleSelectors.setPadding(new Insets(10));
+
+    // Flip button
+    Button flipButton = SceneUIWidgetFactory.createButtonUI(
+        LanguageController.getStringProperty("flip-button"), e -> flipCallback());
+    flipButton.getStyleClass().add("flip-button");
+    HBox flipBox = new HBox(10, flipButton);
+    flipBox.setAlignment(Pos.CENTER);
+    flipBox.setPadding(new Insets(5));
+
+    // Create checkbox
+    CheckBox showBorderCheckBox = new CheckBox();
+    showBorderCheckBox.textProperty().bind(LanguageController.getStringProperty("checkbox-text"));
+    showBorderCheckBox.getStyleClass().add("border-checkbox");
+    showBorderCheckBox.setOnAction(e -> toggleBorderCallback(showBorderCheckBox.isSelected()));
+    showBorderCheckBox.setSelected(doShowBorder);
+
+    VBox gridOptions = new VBox(10, flipBox, showBorderCheckBox);
+    gridOptions.setAlignment(Pos.CENTER);
+    gridOptions.setPadding(new Insets(10));
+
+    // Style Selector Box
+    HBox StyleSelectorBox = new HBox(10, styleSelectors, gridOptions);
+    StyleSelectorBox.setAlignment(Pos.CENTER);
+
+    //#### Create sections ####//
+    BorderPane section2 = SceneUIWidgetFactory.createSectionUI(
+        LanguageController.getStringProperty("themelang-section"), themeLanguageSelectors);
+    BorderPane section3 = SceneUIWidgetFactory.createSectionUI(
+        LanguageController.getStringProperty("gridstyle-section"), StyleSelectorBox);
+
+    //#### Main VBox containing all sections ####//
+    VBox styleBox = new VBox(10, section2, section3);
+    styleBox.setAlignment(Pos.CENTER);
+    styleBox.getStyleClass().add("styles-box");
+    styleBox.setPadding(new Insets(10));
+    styleBox.setMinHeight(Region.USE_COMPUTED_SIZE);
+    VBox.setVgrow(styleBox, Priority.ALWAYS);
+
+    return SceneUIWidgetFactory.createContainerUI(styleBox,
+        LanguageController.getStringProperty("styles-panel"));
   }
 
   private ScrollPane createInfoPanel() {
     infoText = new Label();
     infoText.getStyleClass().add("info-text");
-    infoText.setWrapText(true);  // Prevent text from wrapping
+    infoText.setWrapText(true);
 
-    VBox infoBox = new VBox(10, infoText);
+    HBox infoContainer = new HBox(10, infoText);
+    HBox.setHgrow(infoText, Priority.ALWAYS);
+    infoContainer.setAlignment(Pos.CENTER_LEFT);
+
+    VBox infoBox = new VBox(10, infoContainer);
     infoBox.setAlignment(Pos.TOP_CENTER);
     infoBox.getStyleClass().add("info-box");
     infoBox.setPadding(new Insets(10));
     infoBox.setMinHeight(Region.USE_COMPUTED_SIZE);
     VBox.setVgrow(infoBox, Priority.ALWAYS);
 
-    return SceneUIWidget.createContainerUI(infoBox, "Information");
+    return SceneUIWidgetFactory.createContainerUI(infoBox,
+        LanguageController.getStringProperty("info-panel"));
+  }
+
+  private ScrollPane createLogPanel() {
+    // Create the log text area
+    TextFlow logText = new TextFlow();
+    logText.getStyleClass().add("log-text");
+    Log.addLogListener(log -> {
+      Text text = processAnsiCodes(log);
+      logText.getChildren().add(text);
+    });
+    VBox.setVgrow(logText, Priority.ALWAYS);
+
+    // Create the log container
+    VBox logContainer = new VBox(logText);
+    logContainer.setAlignment(Pos.TOP_LEFT);
+    logContainer.getStyleClass().add("log-box");
+    logContainer.setMinHeight(Region.USE_COMPUTED_SIZE);
+    VBox.setVgrow(logContainer, Priority.ALWAYS);
+
+    return SceneUIWidgetFactory.createContainerUI(logContainer,
+        LanguageController.getStringProperty("log-panel"));
   }
 
   /* HANDLE ALL THE UI CALLBACK FUNCTIONS HERE */
@@ -228,29 +458,25 @@ public class SimulationScene {
   private void startPauseCallback() {
     // Start or pause the simulation
     if (!controller.isLoaded()) {
+      Log.warn("Simulation is not loaded. Aborting start.");
       return;
     }
 
     toggleStartPauseButton(!controller.isPaused());
   }
 
-  private void speedChangeCallback(double speed) {
-    // Change the speed of the simulation
-    updateInterval = 10 / (speed * SPEED_MULTIPLIER);
-  }
-
   private void selectDropDownCallback() {
     // Original value
-    String originalValue = selectType.getValue();
+    String originalValue = selectSimulationType.getValue();
 
     // Select a simulation type
     controller.getAllConfigFileNames();
 
     // Set all the config file names to the dropdown
     String[] items = controller.getAllConfigFileNames().stream().sorted().toArray(String[]::new);
-    selectType.getItems().clear();
-    selectType.getItems().addAll(items);
-    selectType.setValue(originalValue);
+    selectSimulationType.getItems().clear();
+    selectSimulationType.getItems().addAll(items);
+    selectSimulationType.setValue(originalValue);
   }
 
   private void resetCallback() {
@@ -262,6 +488,19 @@ public class SimulationScene {
 
     // Center the grid
     centerGrid();
+
+    // Reset the flip
+    resetFlip();
+  }
+
+  private void newSimulationCallback() {
+    Stage newStage = new Stage();
+    newStage.setX(primaryStage.getX() + NEW_SIMULATION_OFFSETX);
+    newStage.setY(primaryStage.getY() + NEW_SIMULATION_OFFSETY);
+    newStage.setTitle("New Simulation");
+
+    SimulationScene newScene = new SimulationScene(newStage);
+    newScene.start(framesPerSecond, false);
   }
 
   private void loadCallback(String filename) {
@@ -273,19 +512,22 @@ public class SimulationScene {
       // Load the config file
       controller.loadConfig(filename);
 
-      // Clear the parameter box except for the speed
-      parameterBox.getChildren().clear();
-      setParameter("Speed", MIN_SPEED, MAX_SPEED, controller.getConfigSpeed(), SPEED_TOOLTIP, this::speedChangeCallback);
-
       // Reset the simulation
       controller.resetModel();
 
-      // Update the UI Text
-      primaryStage.setTitle(controller.getConfigTitle());
-      infoText.setText(controller.getConfigInformation());
+      // Update the Title Text
+      primaryStage.setTitle(controller.getSimulationTitle());
+
+      // Update Simulation Styles
+      selectCellShape.setValue(controller.getSimulationCellShape());
+      selectEdgePolicy.setValue(controller.getSimulationEdgePolicy());
+      selectNeighborArrangement.setValue(controller.getSimulationNeighborArrangement());
 
       // Center the grid
       centerGrid();
+
+      // Reset the flip
+      resetFlip();
     }
   }
 
@@ -310,97 +552,148 @@ public class SimulationScene {
     }
   }
 
-  private void splashScreenThemeCallback(Theme theme) {
-    setUIStyle(theme);
+  private void flipCallback() {
+    // Flip the grid
+    double scaleX = grid.getScaleX();
+    double scaleY = grid.getScaleY();
+
+    if (scaleX * scaleY < 0) {
+      if (scaleX > 0) {
+        grid.setScaleX(-1 * scaleX);
+      } else {
+        grid.setScaleY(-1 * scaleY);
+      }
+    } else {
+      grid.setScaleX(-1 * scaleX);
+      grid.setScaleY(-1 * scaleY);
+    }
   }
 
-  private void splashScreenLanguageCallback(String language) {
-    // TODO: Implement language change
+  private void toggleBorderCallback(boolean showBorder) {
+    doShowBorder = showBorder;
+    List<Node> children = grid.getChildren();
+
+    // The last child is the boundary
+    for (int i = 0; i < children.size() - 1; i++) {
+      ((Shape) children.get(i)).setStrokeWidth(showBorder ? GridDrawer.DEFAULT_BORDER_SIZE : 0);
+    }
+  }
+
+  private void splashScreenThemeCallback(Theme theme) {
+    updateUIStyle(theme);
+  }
+
+  private void splashScreenLanguageCallback(Language language) {
+    updateUILang(language);
   }
 
   /* PUBLIC UI SETS METHOD */
 
   /**
    * Set the grid with the given number of rows and columns
+   *
    * @param numOfRows the number of rows in the grid
    * @param numOfCols the number of columns in the grid
    */
-  public void setGrid(int numOfRows, int numOfCols) {
-    SceneRenderer.drawGrid(grid, numOfRows, numOfCols);
+  public <T extends GridDrawer> void setGrid(int numOfRows, int numOfCols,
+      Class<T> gridDrawerClass) {
+    SceneRenderer.drawGrid(grid, numOfRows, numOfCols, gridDrawerClass);
+    SceneRenderer.drawGrid(miniGrid, numOfRows, numOfCols, gridDrawerClass);
   }
 
   /**
-   * Set the cell at the given row and column with the given state
-   * @param row the row of the cell
-   * @param col the column of the cell
-   * @param state the state of the cell
+   * Set the cell at the given dx and column with the given state
+   *
+   * @param row   the dx of the cell
+   * @param col   the column of the cell
+   * @param color the state of the cell
    */
-  public void setCell(int row, int col, Enum<?> state) {
-    SceneRenderer.drawCell(grid, row, col, state);
+  public void setCell(int rowCount, int row, int col, String color) {
+    SceneRenderer.drawCell(grid, rowCount, row, col, color);
+    SceneRenderer.drawCell(miniGrid, rowCount, row, col, color);
+  }
+
+  /**
+   * Set the info text with the given information
+   *
+   * @param info the information to be displayed
+   */
+  public void setInfo(String info) {
+    infoText.setText(info);
+  }
+
+  /**
+   * Clear all the parameters in the parameter box
+   */
+  public void clearParameters() {
+    parameterBox.getChildren().clear();
   }
 
   /**
    * Set the parameter with the given label, min, max, default value, tooltip, and callback
-   * @param label the label of the parameter
-   * @param min the minimum value of the parameter
-   * @param max the maximum value of the parameter
+   *
+   * @param labelKey     the label key for the StringProperty of the parameter
+   * @param min          the minimum value of the parameter
+   * @param max          the maximum value of the parameter
    * @param defaultValue the default value of the parameter
-   * @param tooltip the tooltip of the parameter
-   * @param callback the callback function of the parameter
+   * @param tooltipKey   the tooltip key for the StringProperty of the parameter
+   * @param callback     the callback function of the parameter
    */
-  public void setParameter(String label, double min, double max, double defaultValue, String tooltip, Consumer<Double> callback) {
-    parameterBox.getChildren().add(SceneUIWidget.createRangeUI(min, max, defaultValue, label, tooltip, callback));
+  public void setParameter(double min, double max, double defaultValue, String labelKey,
+      String tooltipKey, Consumer<Double> callback) {
+    parameterBox.getChildren().add(SceneUIWidgetFactory.createRangeUI(min, max, defaultValue,
+        LanguageController.getStringProperty(labelKey),
+        LanguageController.getStringProperty(tooltipKey), callback));
   }
 
   /**
    * Set the parameter with the given default value, label, tooltip, and callback
+   *
    * @param defaultValue the default value of the parameter
-   * @param label the label of the parameter
-   * @param tooltip the tooltip of the parameter
-   * @param callback the callback function of the parameter
+   * @param labelKey     the label key for the StringProperty of the parameter
+   * @param tooltipKey   the tooltip key for the StringProperty of the parameter
+   * @param callback     the callback function of the parameter
    */
-  public void setParameter(String defaultValue, String label, String tooltip, Consumer<String> callback) {
-    parameterBox.getChildren().add(SceneUIWidget.createRangeUI(defaultValue, label, tooltip, callback));
+  public void setParameter(String defaultValue, String labelKey, String tooltipKey,
+      Consumer<String> callback) {
+    parameterBox.getChildren().add(
+        SceneUIWidgetFactory.createRangeUI(defaultValue,
+            LanguageController.getStringProperty(labelKey),
+            LanguageController.getStringProperty(tooltipKey), callback));
   }
 
   /**
-   * Set the UI style with the given theme
-   * @param theme the theme of the UI style
+   * Clear all the color parameters in the color box
    */
-  public void setUIStyle(Theme theme) {
-    // Get the style sheets for the scene, widget, and docking
-    String sceneSheet = ThemeController.getThemeSheet(theme, UIComponent.SCENE);
-    String widgetSheet = ThemeController.getThemeSheet(theme, UIComponent.WIDGET);
-    String dockingSheet = ThemeController.getThemeSheet(theme, UIComponent.DOCKING);
+  public void clearColorParameters() {
+    colorBox.getChildren().clear();
+  }
 
-    // Clear the current style sheets and add the new ones
-    primaryStage.getScene().getStylesheets().clear();
-    docker.clearStyleSheets();
-
-    // Add the new style sheets
-    primaryStage.getScene().getStylesheets().add(sceneSheet);
-    primaryStage.getScene().getStylesheets().add(widgetSheet);
-    docker.addStyleSheet(dockingSheet);
-    SceneUIWidget.setWidgetStyleSheet(widgetSheet);
+  /**
+   * Set the color with the given default color, label, tooltip, and callback
+   *
+   * @param defaultColor the default color of the parameter
+   * @param labelKey     the label key for the StringProperty of the parameter
+   * @param tooltipKey   the tooltip key for the StringProperty of the parameter
+   * @param callback     the callback function of the parameter
+   */
+  public void setColorParameter(String defaultColor, String labelKey, String tooltipKey,
+      Consumer<String> callback) {
+    colorBox.getChildren().add(
+        SceneUIWidgetFactory.createColorSelectorUI(defaultColor,
+            LanguageController.getStringProperty(labelKey),
+            LanguageController.getStringProperty(tooltipKey), callback));
   }
 
   /* PRIVATE UI HELPER METHODS */
 
-  private void step(double elapsedTime) {
-    timeSinceLastUpdate += elapsedTime;
-    if (timeSinceLastUpdate >= updateInterval) {
-      controller.update();
-      timeSinceLastUpdate = 0.0;
-    }
-  }
-
   private void toggleStartPauseButton(boolean isPause) {
     if (isPause) {
-      startPauseButton.setText("Start");
+      startPauseButton.textProperty().bind(LanguageController.getStringProperty("start-button"));
       startPauseButton.getStyleClass().setAll("button", "start-button");
       controller.setStartPause(true);
     } else {
-      startPauseButton.setText("Pause");
+      startPauseButton.textProperty().bind(LanguageController.getStringProperty("pause-button"));
       startPauseButton.getStyleClass().setAll("button", "pause-button");
       controller.setStartPause(false);
     }
@@ -419,5 +712,39 @@ public class SimulationScene {
     double centerY = (paneHeight - gridHeight) / 2;
 
     grid.relocate(centerX, centerY);
+  }
+
+  private void resetFlip() {
+    grid.setScaleX(abs(grid.getScaleX()));
+    grid.setScaleY(abs(grid.getScaleY()));
+  }
+
+  private void updateUIStyle(Theme theme) {
+    // Get the style sheets for the scene, widget, and docking
+    String sceneSheet = ThemeController.getThemeSheet(theme, UIComponent.SCENE);
+    String widgetSheet = ThemeController.getThemeSheet(theme, UIComponent.WIDGET);
+    String dockingSheet = ThemeController.getThemeSheet(theme, UIComponent.DOCKING);
+
+    // Clear the current style sheets and add the new ones
+    primaryStage.getScene().getStylesheets().clear();
+    docker.clearStyleSheets();
+
+    // Add the new style sheets
+    primaryStage.getScene().getStylesheets().add(sceneSheet);
+    primaryStage.getScene().getStylesheets().add(widgetSheet);
+    docker.addStyleSheet(dockingSheet);
+    docker.addStyleSheet(sceneSheet);
+    docker.addStyleSheet(widgetSheet);
+    SceneUIWidgetFactory.setWidgetStyleSheet(widgetSheet);
+
+    // Update the theme instance
+    currentTheme = theme;
+  }
+
+  private void updateUILang(Language language) {
+    LanguageController.switchLanguage(language);
+
+    // Update the language instance
+    currentLanguage = language;
   }
 }

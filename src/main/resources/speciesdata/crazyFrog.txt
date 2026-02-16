@@ -1,0 +1,10 @@
+# Hop
+# This just hops forward blindly -- good for testing your program works at all.
+
+right 90
+MOVE 2
+ifwall 5
+Go 2
+
+right 180
+Go 2

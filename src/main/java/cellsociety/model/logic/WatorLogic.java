@@ -7,14 +7,16 @@ import cellsociety.model.data.states.WatorState;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Implements the Wa-Tor world simulation logic, updating sharks and fish based on
- * energy, breeding times, and moves. All occupant data (energy, time since last breeding)
- * is stored within each Cell's properties map.
+ * Implements the Wa-Tor world simulation logic for {@link Logic}, updating sharks and fish based on
+ * energy, breeding times, and moves. All occupant data (energy, time since last breeding) is stored
+ * within each Cell's properties map.
+ *
+ * @author Jacob You
  */
 public class WatorLogic extends Logic<WatorState> {
-
 
   private static double sharkReproductionTime;
   private static double sharkBaseEnergy;
@@ -22,74 +24,123 @@ public class WatorLogic extends Logic<WatorState> {
   private static double fishReproductionTime;
   private final List<Cell<WatorState>> sharkCells;
   private final List<Cell<WatorState>> fishCells;
-  private static HashMap<String, Double> baseSharkProperties;
-  private static HashMap<String, Double> baseFishProperties;
+  private static Map<String, Double> baseSharkProperties;
+  private static Map<String, Double> baseFishProperties;
 
   /**
    * Constructs a WatorLogic instance for the given grid.
    *
-   * @param grid The grid on which to run the Wa-Tor simulation.
+   * @param grid       The grid on which to run the Wa-Tor simulation.
+   * @param parameters The simulation parameters.
+   * @throws IllegalArgumentException if any parameter is out of bounds.
    */
-  public WatorLogic(Grid<WatorState> grid, ParameterRecord parameters) {
+  public WatorLogic(Grid<WatorState> grid, ParameterRecord parameters)
+      throws IllegalArgumentException {
     super(grid, parameters);
     initializePropertyMaps();
+
+    setSharkBaseEnergy(getDoubleParamOrFallback("sharkBaseEnergy"));
+    setFishEnergyGain(getDoubleParamOrFallback("fishEnergyGain"));
+    setSharkReproductionTime(getDoubleParamOrFallback("sharkReproductionTime"));
+    setFishReproductionTime(getDoubleParamOrFallback("fishReproductionTime"));
+
     List<List<Cell<WatorState>>> cellStates = getAllCellStates();
     sharkCells = cellStates.get(0);
     fishCells = cellStates.get(1);
   }
 
-  private static void initializePropertyMaps() {
-    if (baseSharkProperties == null) {
-      baseSharkProperties = new HashMap<>();
-      baseSharkProperties.put("time", 0.0);
-      baseSharkProperties.put("energy", sharkBaseEnergy);
-    }
-    if (baseFishProperties == null) {
-      baseFishProperties = new HashMap<>();
-      baseFishProperties.put("time", 0.0);
-    }
-  }
-
   /**
-   * Sets the base energy that each shark starts with or resets to upon breeding.
+   * Sets the base energy level for sharks.
    *
-   * @param energy the initial or reset energy value for sharks
+   * @param energy the shark base energy to set.
+   * @throws IllegalArgumentException if the energy value is out of bounds.
    */
-  public static void setBaseSharkEnergy(double energy) {
+  public void setSharkBaseEnergy(double energy) throws IllegalArgumentException {
+    double min = getMinParam("sharkBaseEnergy");
+    double max = getMaxParam("sharkBaseEnergy");
+    checkBounds(energy, min, max);
     sharkBaseEnergy = energy;
-    baseSharkProperties.put("energy", sharkBaseEnergy);
+    baseSharkProperties.put("energy", energy);
   }
 
   /**
-   * Sets the amount of energy sharks gain upon eating a fish.
+   * Sets the energy gain for sharks when consuming fish.
    *
-   * @param energy how much energy a shark gains for each fish consumed
+   * @param energy the energy gain for sharks.
+   * @throws IllegalArgumentException if the energy gain value is out of bounds.
    */
-  public static void setFishEnergyGain(double energy) {
+  public void setFishEnergyGain(double energy) throws IllegalArgumentException {
+    double min = getMinParam("fishEnergyGain");
+    double max = getMaxParam("fishEnergyGain");
+    checkBounds(energy, min, max);
     fishEnergyGain = energy;
   }
 
   /**
-   * Sets the number of cycles after which a shark reproduces (resets its breeding chronon).
+   * Sets the reproduction time for sharks.
    *
-   * @param time how many updates it takes for a shark to breed
+   * @param time the reproduction time for sharks.
+   * @throws IllegalArgumentException if the time value is out of bounds.
    */
-  public static void setSharkReproductionTime(double time) {
+  public void setSharkReproductionTime(double time) throws IllegalArgumentException {
+    double min = getMinParam("sharkReproductionTime");
+    double max = getMaxParam("sharkReproductionTime");
+    checkBounds(time, min, max);
     sharkReproductionTime = time;
   }
 
   /**
-   * Sets the number of cycles after which a fish reproduces (resets its breeding chronon).
+   * Sets the reproduction time for fish.
    *
-   * @param time how many updates it takes for a fish to breed
+   * @param time the reproduction time for fish.
+   * @throws IllegalArgumentException if the time value is out of bounds.
    */
-  public static void setFishReproductionTime(double time) {
+  public void setFishReproductionTime(double time) throws IllegalArgumentException {
+    double min = getMinParam("fishReproductionTime");
+    double max = getMaxParam("fishReproductionTime");
+    checkBounds(time, min, max);
     fishReproductionTime = time;
   }
 
   /**
-   * Updates the grid by running shark logic first, then fish logic, to avoid partial collisions.
-   * Then calls {@code grid.updateGrid()} to finalize nextState -> currentState for each cell.
+   * Returns the base energy level for sharks.
+   *
+   * @return the shark base energy.
+   */
+  public double getSharkBaseEnergy() {
+    return sharkBaseEnergy;
+  }
+
+  /**
+   * Returns the energy gain for sharks when consuming fish.
+   *
+   * @return the fish energy gain.
+   */
+  public double getFishEnergyGain() {
+    return fishEnergyGain;
+  }
+
+  /**
+   * Returns the reproduction time for sharks.
+   *
+   * @return the shark reproduction time.
+   */
+  public double getSharkReproductionTime() {
+    return sharkReproductionTime;
+  }
+
+  /**
+   * Returns the reproduction time for fish.
+   *
+   * @return the fish reproduction time.
+   */
+  public double getFishReproductionTime() {
+    return fishReproductionTime;
+  }
+
+  /**
+   * Updates the grid by processing shark movements first, then fish movements, and finalizes the
+   * state transitions.
    */
   @Override
   public void update() {
@@ -106,13 +157,24 @@ public class WatorLogic extends Logic<WatorState> {
     grid.updateGrid();
   }
 
+  private static void initializePropertyMaps() {
+    if (baseSharkProperties == null) {
+      baseSharkProperties = new HashMap<>();
+      baseSharkProperties.put("time", 0.0);
+      baseSharkProperties.put("energy", sharkBaseEnergy);
+    }
+    if (baseFishProperties == null) {
+      baseFishProperties = new HashMap<>();
+      baseFishProperties.put("time", 0.0);
+    }
+  }
+
   @Override
   protected void updateSingleCell(Cell<WatorState> cell) {
     if (cell.getCurrentState() == WatorState.SHARK) {
       Cell<WatorState> nextLocation = getNextSharkLocation(cell);
       moveShark(cell, nextLocation);
-    }
-    else if (cell.getCurrentState() == WatorState.FISH) {
+    } else if (cell.getCurrentState() == WatorState.FISH) {
       Cell<WatorState> nextLocation = getNextFishLocation(cell);
       moveFish(cell, nextLocation);
     }
@@ -124,8 +186,8 @@ public class WatorLogic extends Logic<WatorState> {
     for (Cell<WatorState> neighbor : sharkCell.getNeighbors().values()) {
       if (neighbor.getNextState() == WatorState.FISH) {
         fishNeighbors.add(neighbor);
-      }
-      else if (neighbor.getCurrentState() == WatorState.OPEN && neighbor.getNextState() == WatorState.OPEN) {
+      } else if (neighbor.getCurrentState() == WatorState.OPEN
+          && neighbor.getNextState() == WatorState.OPEN) {
         openNeighbors.add(neighbor);
       }
     }
@@ -133,8 +195,7 @@ public class WatorLogic extends Logic<WatorState> {
     if (!fishNeighbors.isEmpty()) {
       int index = (int) (Math.random() * fishNeighbors.size());
       nextLocation = fishNeighbors.get(index);
-    }
-    else if (!openNeighbors.isEmpty()) {
+    } else if (!openNeighbors.isEmpty()) {
       int index = (int) (Math.random() * openNeighbors.size());
       nextLocation = openNeighbors.get(index);
     }
@@ -149,8 +210,7 @@ public class WatorLogic extends Logic<WatorState> {
     if (nextLocation.getNextState() == WatorState.FISH) {
       sharkCell.setProperty("energy", energy + fishEnergyGain);
       fishCells.remove(nextLocation);
-    }
-    else {
+    } else {
       sharkCell.setProperty("energy", energy - 1);
     }
     if ((int) sharkCell.getProperty("energy") <= 0) {

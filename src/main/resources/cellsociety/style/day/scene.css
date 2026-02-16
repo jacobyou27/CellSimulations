@@ -23,10 +23,52 @@
   -fx-text-fill: #333333;
 }
 
+.log-text {
+  -fx-font-family: "Courier New", monospace;  /* Use a monospace font for console-like appearance */
+  -fx-line-spacing: 2px;  /* Add line spacing for readability */
+  -fx-font-weight: bold;
+  -fx-font-size: 12px;
+}
+
+.log-text-error{
+  -fx-fill: #d32f2f;
+}
+
+.log-text-warn {
+  -fx-fill: #f57c00;
+}
+
+.log-text-info {
+  -fx-fill: #19d25a;
+}
+
+.log-text-trace {
+  -fx-fill: #333333;
+}
+
+.log-text-default {
+  -fx-fill: #333333;
+}
+
+/* ==========================
+   Grid
+   ========================== */
+
+.grid-panel {
+  -fx-border-color: transparent;
+}
+
 /* ==========================
    Containers (Unified Box Styling)
    ========================== */
 .controls-box {
+  -fx-border-color: #cccccc;
+  -fx-padding: 8px;
+  -fx-background-color: #ffffff;
+  -fx-border-radius: 6px;
+}
+
+.styles-box {
   -fx-border-color: #cccccc;
   -fx-padding: 8px;
   -fx-background-color: #ffffff;
@@ -47,19 +89,23 @@
   -fx-border-radius: 6px;
 }
 
+.color-box {
+  -fx-border-color: #cccccc;
+  -fx-padding: 8px;
+  -fx-background-color: #f9f9f9;
+  -fx-border-radius: 6px;
+}
+
+.log-box {
+  -fx-border-color: #cccccc;
+  -fx-padding: 8px;
+  -fx-background-color: #f9f9f9;
+  -fx-border-radius: 6px;
+}
+
 /* ==========================
    Button Styling (Light Mode)
    ========================== */
-.button {
-  -fx-text-fill: #333333;
-  -fx-font-weight: bold;
-  -fx-background-radius: 8px;
-  -fx-padding: 10px 15px;
-  -fx-border-color: transparent;
-  -fx-background-insets: 0, 1, 2;
-  -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.1), 5, 0, 0, 2);
-  -fx-transition: all 0.3s ease-in-out;
-}
 
 /* Start Button (Green) */
 .start-button {
@@ -149,4 +195,50 @@
   -fx-background-color: linear-gradient(to bottom, #9e9e9e, #424242);
   -fx-scale-x: 0.98;
   -fx-scale-y: 0.98;
+}
+
+/* Flip Button (Metal) */
+.flip-button {
+  -fx-background-color: linear-gradient(to bottom, #b0bec5, #546e7a);
+}
+
+.flip-button:hover {
+  -fx-background-color: linear-gradient(to bottom, #90a4ae, #455a64);
+  -fx-scale-x: 1.05;
+  -fx-scale-y: 1.05;
+}
+
+.flip-button:pressed {
+  -fx-background-color: linear-gradient(to bottom, #546e7a, #263238);
+  -fx-scale-x: 0.98;
+  -fx-scale-y: 0.98;
+}
+
+/* New Simulation Button (Purple) */
+
+.new-button {
+  -fx-background-color: linear-gradient(to bottom, #BA68C8, #7B1FA2);
+}
+
+.new-button:hover {
+  -fx-background-color: linear-gradient(to bottom, #CE93D8, #4A148C);
+  -fx-scale-x: 1.05;
+  -fx-scale-y: 1.05;
+}
+
+.new-button:pressed {
+  -fx-background-color: linear-gradient(to bottom, #7B1FA2, #4A0072);
+  -fx-scale-x: 0.98;
+  -fx-scale-y: 0.98;
+}
+
+/* ==========================
+   Checker Box
+   ========================== */
+
+.border-checkbox {
+  -fx-border-color: transparent;
+  -fx-font-size: 14px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #2c2c2c;
 }

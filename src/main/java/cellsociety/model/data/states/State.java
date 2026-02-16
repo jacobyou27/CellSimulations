@@ -4,14 +4,21 @@ import cellsociety.logging.Log;
 
 /**
  * An interface for enums that have an associated integer state value.
+ *
+ * @author Jacob You
  */
 public interface State {
 
+  /**
+   * Returns the integer value of the given state.
+   *
+   * @return the integer value of the given state
+   */
   int getValue();
 
   /**
-   * Converts an integer value to the corresponding enum constant.
-   * If the integer doesn't hve an enum, set to the first constant available.
+   * Converts an integer value to the corresponding enum constant. If the integer doesn't hve an
+   * enum, set to the first constant available.
    *
    * @param <T>       The type of the enum.
    * @param enumClass The class of the enum.
